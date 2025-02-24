@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced Anime List Manager</title>
+  <style>
+    /* Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #74ABE2, #5563DE);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    /* Form & Controls */
+    .controls {
+      margin-bottom: 1.5rem;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    form input[type="text"] {
+      flex: 1 1 250px;
+      padding: 0.5rem;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    form label {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    form label input[type="checkbox"] {
+      margin-left: 5px;
+      transform: scale(1.2);
+    }
+    form button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: #5c6bc0;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.3s ease;
+    }
+    form button:hover {
+      background: #3f51b5;
+    }
+    .search-sort {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    .search-sort input,
+    .search-sort select {
+      padding: 0.5rem;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      font-size: 1rem;
+      min-width: 150px;
+    }
+    /* Table Styles */
+    .table-container {
+      overflow-x: auto;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+    thead {
+      background: #e8eaf6;
+    }
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+    th {
+      font-weight: bold;
+    }
+    td button {
+      margin-right: 5px;
+      padding: 0.3rem 0.6rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: #fff;
+    }
+    .edit-btn {
+      background: #ffa726;
+      transition: background 0.3s ease;
+    }
+    .edit-btn:hover {
+      background: #fb8c00;
+    }
+    .remove-btn {
+      background: #ef5350;
+      transition: background 0.3s ease;
+    }
+    .remove-btn:hover {
+      background: #e53935;
+    }
+    /* Button Group */
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    .button-group button {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      background: #66bb6a;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.3s ease;
+    }
+    .button-group button:hover {
+      background: #43a047;
+    }
+    #clearList {
+      background: #9e9e9e;
+    }
+    #clearList:hover {
+      background: #757575;
+    }
+    /* Mobile Adjustments */
+    @media (max-width: 600px) {
+      .container {
+        padding: 1rem;
+      }
+      form, .search-sort {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Advanced Anime List Manager</h1>
+    <div class="controls">
+      <form id="animeForm">
+        <input type="text" id="animeName" placeholder="Enter anime name" required />
+        <label>
+          Watched?
+          <input type="checkbox" id="animeWatched" />
+        </label>
+        <button type="submit">Add Anime</button>
+      </form>
+      <div class="search-sort">
+        <input type="text" id="searchInput" placeholder="Search anime..." />
+        <select id="sortSelect">
+          <option value="default">Sort By</option>
+          <option value="nameAsc">Name Ascending</option>
+          <option value="nameDesc">Name Descending</option>
+          <option value="watched">Watched Status</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-container">
+      <table id="animeTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Anime Name</th>
+            <th>Watched</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Anime rows will be dynamically added here -->
+        </tbody>
+      </table>
+    </div>
+    <div class="button-group">
+      <button id="downloadPdf">Download as PDF</button>
+      <button id="clearList">Clear List</button>
+    </div>
+  </div>
+
+  <!-- html2pdf library for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+  <script>
+    // Retrieve anime list from localStorage or initialize empty
+    let animeList = JSON.parse(localStorage.getItem('animeList')) || [];
+
+    // Save list to localStorage
+    function saveList() {
+      localStorage.setItem('animeList', JSON.stringify(animeList));
+    }
+
+    // Display anime list in the table
+    function displayList() {
+      const tbody = document.querySelector('#animeTable tbody');
+      tbody.innerHTML = '';
+      const searchVal = document.getElementById('searchInput').value.toLowerCase();
+      const sortValue = document.getElementById('sortSelect').value;
+      let listToDisplay = [...animeList];
+
+      // Sort based on selection
+      if (sortValue === 'nameAsc') {
+        listToDisplay.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (sortValue === 'nameDesc') {
+        listToDisplay.sort((a, b) => b.name.localeCompare(a.name));
+      } else if (sortValue === 'watched') {
+        listToDisplay.sort((a, b) => b.watched - a.watched);
+      }
+
+      // Populate table rows based on search filter and sorted order
+      listToDisplay.forEach((anime, index) => {
+        if (anime.name.toLowerCase().includes(searchVal)) {
+          const tr = document.createElement('tr');
+
+          // Index cell
+          const tdIndex = document.createElement('td');
+          tdIndex.textContent = index + 1;
+          tr.appendChild(tdIndex);
+
+          // Anime name cell
+          const tdName = document.createElement('td');
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = anime.name;
+          nameSpan.classList.add('anime-name');
+          tdName.appendChild(nameSpan);
+          tr.appendChild(tdName);
+
+          // Watched status cell
+          const tdWatched = document.createElement('td');
+          const watchedCheckbox = document.createElement('input');
+          watchedCheckbox.type = 'checkbox';
+          watchedCheckbox.checked = anime.watched;
+          watchedCheckbox.addEventListener('change', () => {
+            anime.watched = watchedCheckbox.checked;
+            saveList();
+            displayList();
+          });
+          tdWatched.appendChild(watchedCheckbox);
+          tr.appendChild(tdWatched);
+
+          // Actions cell
+          const tdActions = document.createElement('td');
+          // Edit button (using prompt for simplicity)
+          const editBtn = document.createElement('button');
+          editBtn.textContent = 'Edit';
+          editBtn.classList.add('edit-btn');
+          editBtn.addEventListener('click', () => {
+            const newName = prompt('Edit anime name:', anime.name);
+            if (newName && newName.trim() !== '') {
+              anime.name = newName.trim();
+              saveList();
+              displayList();
+            }
+          });
+          tdActions.appendChild(editBtn);
+
+          // Remove button
+          const removeBtn = document.createElement('button');
+          removeBtn.textContent = 'Remove';
+          removeBtn.classList.add('remove-btn');
+          removeBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to remove this anime?')) {
+              animeList.splice(animeList.indexOf(anime), 1);
+              saveList();
+              displayList();
+            }
+          });
+          tdActions.appendChild(removeBtn);
+          tr.appendChild(tdActions);
+
+          tbody.appendChild(tr);
+        }
+      });
+    }
+
+    // Initial display
+    displayList();
+
+    // Add new anime event
+    document.getElementById('animeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const animeNameInput = document.getElementById('animeName');
+      const animeWatched = document.getElementById('animeWatched').checked;
+      const name = animeNameInput.value.trim();
+      if (name) {
+        animeList.push({ name: name, watched: animeWatched });
+        saveList();
+        animeNameInput.value = '';
+        document.getElementById('animeWatched').checked = false;
+        displayList();
+      }
+    });
+
+    // Clear list event
+    document.getElementById('clearList').addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear the entire list?')) {
+        animeList = [];
+        saveList();
+        displayList();
+      }
+    });
+
+    // Search and sort events
+    document.getElementById('searchInput').addEventListener('input', displayList);
+    document.getElementById('sortSelect').addEventListener('change', displayList);
+
+    // Generate PDF content in table format (without action buttons)
+    function generatePdfContent() {
+      const pdfContainer = document.createElement('div');
+      pdfContainer.style.padding = '20px';
+      pdfContainer.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+
+      const title = document.createElement('h2');
+      title.textContent = 'My Anime List';
+      title.style.textAlign = 'center';
+      title.style.marginBottom = '20px';
+      pdfContainer.appendChild(title);
+
+      const table = document.createElement('table');
+      table.style.width = '100%';
+      table.style.borderCollapse = 'collapse';
+      table.style.marginBottom = '20px';
+
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      ['No.', 'Anime Name', 'Watched'].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        th.style.border = '1px solid #ddd';
+        th.style.padding = '8px';
+        th.style.backgroundColor = '#e8eaf6';
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      animeList.forEach((anime, index) => {
+        const tr = document.createElement('tr');
+
+        const tdIndex = document.createElement('td');
+        tdIndex.textContent = index + 1;
+        tdIndex.style.border = '1px solid #ddd';
+        tdIndex.style.padding = '8px';
+        tr.appendChild(tdIndex);
+
+        const tdName = document.createElement('td');
+        tdName.textContent = anime.name;
+        tdName.style.border = '1px solid #ddd';
+        tdName.style.padding = '8px';
+        tr.appendChild(tdName);
+
+        const tdWatched = document.createElement('td');
+        tdWatched.textContent = anime.watched ? "Yes" : "No";
+        tdWatched.style.border = '1px solid #ddd';
+        tdWatched.style.padding = '8px';
+        tr.appendChild(tdWatched);
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      pdfContainer.appendChild(table);
+      return pdfContainer;
+    }
+
+    // Download PDF event using html2pdf
+    document.getElementById('downloadPdf').addEventListener('click', () => {
+      const pdfContent = generatePdfContent();
+      const opt = {
+        margin: 0.5,
+        filename: 'anime-list.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(pdfContent).save();
+    });
+  </script>
+</body>
+</html>
